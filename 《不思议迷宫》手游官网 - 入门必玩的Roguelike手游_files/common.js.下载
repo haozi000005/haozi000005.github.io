@@ -1,0 +1,100 @@
+//导航
+$(window).scroll(function(){
+	var o = $(window).scrollTop(),
+		s = $('#top_bar');
+	o>=55 ? s.addClass('fixed'):s.removeClass('fixed');
+	o>=450 ? $('.back_top').removeClass('hid'):$('.back_top').addClass('hid');
+})
+//返回顶部
+function returnTop() {
+	$('html,body').animate({scrollTop:'0px'},1000);
+}
+
+$('.main_search .search_btn').on('click',function(){
+	mainSearch();
+})	
+$('.main_search .search_input').on('keydown',function(ev){
+	var e = ev || event;
+	if(e.keyCode==13){
+		mainSearch();
+	}
+})
+
+$('.inside_walkthrough_search .search_btn').on('click',function(){
+	strategySearch();
+})	
+$('.inside_walkthrough_search .search_input').on('keydown',function(ev){
+	var e = ev || event;
+	if(e.keyCode==13){
+		strategySearch();
+	}
+})
+
+function mainSearch(){
+	query = $('.search_input').val();
+	query = searchTrim(query);
+	if(query){
+		location.href = '/search/?query=' + encodeURI(encodeURI(query));
+	} else {
+		alert("请输入搜索内容！");
+	}
+	return false;
+}
+
+function strategySearch(){
+	query = $('.search_input').val();
+	query = searchTrim(query);
+	count = 0; // 符合的条数
+
+	if(query){
+		$(document).ready(function(){
+		var obj = $("div.pr.inside_list.inside_list_strategy").find("li");
+
+		$(obj).each(function(){
+			$(this).show();
+			var title = $(this).find("p.pa.inside_list_title");
+			// 标题中不符合的，进行隐藏
+			if(title.text().indexOf(query) < 0) {
+				$(this).hide();
+			}else {
+				// 关键字标红
+				var reg = new RegExp("(" + query + ")" , "g");
+				var new_str = title.text().replace(reg, "<font color='red'>$1</font>");
+				title.html(new_str);
+				count++;
+			}
+		})
+
+		var tip = $(".tip");
+		if(count == 0){
+			var tip_str = '<h3>没有找到与“<b>' + query + '</b>”相关的内容。</h3>';
+			tip.html(tip_str);
+			tip.show();
+		}else{
+			tip.hide();
+		}
+	});
+	// 查找状态下，隐藏更多按钮
+	$('.btn_inside_more').addClass('hid');
+	} else {
+		alert("请输入搜索内容！");
+	}
+	return false;
+}
+
+function searchTrim(str){
+	  whitespace = ' \n\r\t\f\x0b\xa0\u2000\u2001\u2002\u2003\u2004\u2005\u2006\u2007\u2008\u2009\u200a\u200b\u2028\u2029\u3000';
+	  for (var i = 0,len = str.length; i < len; i++) {
+	    if (whitespace.indexOf(str.charAt(i)) === -1) {
+	      str = str.substring(i);
+	      break;
+	    }
+	  }
+	  for (i = str.length - 1; i >= 0; i--) {
+	    if (whitespace.indexOf(str.charAt(i)) === -1) {
+	      str = str.substring(0, i + 1);
+	      break;
+	    }
+	  }
+	  return whitespace.indexOf(str.charAt(0)) === -1 ? str : '';
+}

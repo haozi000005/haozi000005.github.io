@@ -1,0 +1,181 @@
+
+(function ($) {
+    var static_url;
+    static_url = window.STATIC_URL ||  window.RESOURCE_URL;
+    
+    if(static_url == undefined){
+        static_url = '//static.leiting.com';
+    }
+    window.CAPTCHA_URL=window.CAPTCHA_URL||'https://captcha.leiting.com';
+    
+    var captcha_domain = window.CAPTCHA_URL.substring(window.CAPTCHA_URL.indexOf('://') + 3);
+    var baseUrl = window.location.protocol + '//' + captcha_domain;
+    var captcha_url = baseUrl + '/captcha/get.do';
+
+    if (window.initGeetest === undefined) {
+        document.write("<script language=javascript src='" + static_url + "/module/captcha/js/gt.js'><\/script>");
+    }
+
+    // 通用的图片验证码组件
+    $.fn.imgCaptcha = function (options) {
+        var settings = {
+            isCreate: false,
+            content: null, // isCreate为true时，如果content有设置则使用content内容，无则插入通用的图片验证码html代码
+            height: '100%',
+            width: '100%',
+            onLoadSuccess: function () {}
+        }
+        $.extend(settings, options || {});
+        var that = this;
+        that.each(function () {
+            $.imgCaptcha.init(that, settings);
+        })
+    };
+    $.imgCaptcha = {
+        init: function (target, options) {
+            this.render(target, options);
+        },
+        render: function (target, options) {
+            var that = this;
+            if (options.isCreate) {
+                // 新建图片验证码html内容
+                if (options.content != null) {
+                    if (typeof options.content === 'string') {
+                        options.content = $(options.content);
+                    }
+                    target.empty().append(options.content);
+                    that.refresh(target, options);
+                } else {}
+            } else {
+                // 使用现有元素内的html内容,div的占位元素需要设置为visibility：hidden，避免页面加载时闪烁
+                that.refresh(target, options);
+            }
+            target.css('visibility', 'visible');
+            target.on('click', 'img', function () {
+                that.refresh(target, options);
+            });
+            target.off('captcha-reset').on('captcha-reset', function () {
+                that.refresh(target, options);
+            });
+            options.onLoadSuccess.apply(target, [target, 1]);
+        },
+        refresh: function (target, options) {
+            var img = target.find('img').eq(0);
+            var randomId = (new Date()).valueOf() + (parseInt(Math.random() * 100000000 + 1));
+            var url = captcha_url + '?id=' + randomId;
+            img.attr('src', url);
+            var captchaId = target.find('input[name="captchaId"]');
+            if (captchaId.length == 0) {
+                $('<input name="captchaId" type="hidden" value="' + randomId + '" />').appendTo(target)
+            } else {
+                captchaId.val(randomId);
+            }
+        }
+    };
+    // 极验验证码组件
+    $.fn.gtCaptcha = function (options) {
+        var settings = {
+            product: 'float', // 验证码框样式
+            width: '100%', // 验证码框宽度
+            onLoadSuccess: function () {},
+        }
+        $.extend(settings, options || {});
+        var that = this;
+        that.each(function () {
+            $.gtCaptcha.init(that, settings);
+        })
+    };
+    $.gtCaptcha = {
+        init: function (target, options) {
+            this.render(target, options);
+        },
+        render: function (target, options) {
+            var that = this;
+            var captchaId = (new Date()).valueOf() + (parseInt(Math.random() * 100000000 + 1));
+            $.ajax({
+                url: baseUrl + "/captcha/getGeetest.do?clientType=h5&id=" + captchaId, // 加随机数防止缓存
+                type: "get",
+                dataType: "jsonp",
+                success: function (data) {
+                    // 调用 initGeetest 初始化参数
+                    // 参数1：配置参数
+                    // 参数2：回调，回调的第一个参数验证码对象，之后可以使用它调用相应的接口
+                    initGeetest({
+                        gt: data.gt,
+                        challenge: data.challenge,
+                        new_captcha: data.new_captcha, // 用于宕机时表示是新验证码的宕机
+                        offline: !data.success, // 表示用户后台检测极验服务器是否宕机，一般不需要关注
+                        product: options.product, // 产品形式，包括：float，popup
+                        width: options.width
+                        // 更多配置参数请参见：http://www.geetest.com/install/sections/idx-client-sdk.html#config
+                    }, function (captchaObj) {
+                        that.gtCaptchaHandler(target, options, captchaObj, captchaId);
+                    });
+                }
+            });
+
+        },
+        gtCaptchaHandler: function (target, options, captchaObj, captchaId) {
+            target.empty();
+            $('<input name="captchaId" type="hidden" value="' + captchaId + '" />').appendTo(target)
+            captchaObj.appendTo(target);
+
+            target.css('visibility', 'visible');
+            captchaObj.onReady(function () {
+                options.onLoadSuccess.apply(target, [captchaObj, 2]);
+                target.off('captcha-reset').on('captcha-reset', function () {
+                    captchaObj.reset();
+                })
+            });
+        }
+    }
+    // 图片验证码与极验验证码切换组件
+    $.fn.ltCaptcha = function (options) {
+        var that = this;
+        this.each(function () {
+            $.ltCaptcha.init(that, options);
+        })
+    }
+    $.ltCaptcha = {
+        init: function (target, options) {
+            var settings = {
+                sys: '', //
+                product: 'float', // 验证码框样式
+                width: '100%', // 验证码框宽度
+                onLoadSuccess: function () {}
+            }
+            $.extend(settings, options || {});
+            if (settings.sys === '') {
+                target.imgCaptcha(settings);
+                return;
+            }
+            var ptCaptchaObj = target.children();
+            target.html('<p style="color:#666666;">正在加载验证码...</p>').css('visibility', 'visible');
+            this.getMode(settings.sys, function (data) {
+                if (data.type == 2) {
+                    target.gtCaptcha(settings);
+                } else {
+                    target.imgCaptcha($.extend(settings, {
+                            isCreate: true,
+                            content: ptCaptchaObj
+                        }));
+                }
+            });
+        },
+        getMode: function (sys, callback) {
+            $.ajax({
+                url: baseUrl + "/captcha/getMode.do?sys=" + sys,
+                type: "get",
+                cache: false,
+                async: false,
+                dataType: "jsonp",
+                success: function (data) {
+                    if (typeof callback === 'function') {
+                        callback(data);
+                    }
+                }
+            });
+        }
+    }
+
+})(jQuery);

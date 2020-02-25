@@ -1,0 +1,278 @@
+// 
+//  login.js
+//  <project>
+//  
+//  Created by wucj on 2019-05-30.
+//  blogs:https://segmentfault.com/u/shouzijiangs
+//  Copyright 2019 wucj. All rights reserved.
+// 
+
+(function($){
+    $.fn.phone_login = function (options) {
+        var self = this;
+        if(options.show_choose){
+        	options.title=options.title||'游戏预约';
+        }else{
+        	options.title=options.title||'手机登录';
+        }
+		var settings = {
+			capchaTimestamp_:''+(new Date()).valueOf()+(parseInt(Math.random()*100000000+1)),
+			ajax_status		:false,
+			times			:null
+		}
+        $.extend(settings, options || {});
+        self.each(function () {
+            $.phone_login.init(self, settings);
+        })
+    }
+    $.phone_login = {
+        init: function (self, options) {
+        	var self = this;
+        	self.append_css(options);
+		self.append_html(options);
+		self.eventFn(options);
+		
+		clearInterval(options.times);
+		$('#LT_getCode').empty().text('获取验证码').removeClass('hui');
+        },
+	    append_css:function(options){
+	    	if($('#LT_phone_login_css').length)return;
+	    	if(options.stylesheet)return;
+			$('head').append('<link id="LT_phone_login_css" rel="stylesheet" href="//static.leiting.com/module/phone_login/css/'+LT_Model.isMobile()+'.css?v=20190909" />');
+	    },
+        append_html:function(options){
+        	var _parent=options.parent||$('body');
+			_parent.append(
+				'<div class="LT_Common LT_Login" id="phone_login">'+
+					'<div class="LT_Login_bg"></div>'+
+					'<div class="LT_popup">'+
+						'<div class="LT_close"></div>'+
+						'<div class="LT_title">'+options.title+'</div>'+
+						'<div class="LT_cont">'+
+							'<p class="LT_error_txt"></p>'+
+							
+							'<ul class="LT_message">'+
+								'<li class="clearfix">'+
+									'<i class="i1 LT_icon"></i>'+
+									'<input type="text" id="LT_phone" placeholder="请输入你的手机号码" maxlength="11">'+
+								'</li>'+
+								'<li class="clearfix LT_test">'+
+									'<div class="entry captcha" id="ltCaptcha">'+
+										'<input name="j_captcha" class="input-small" autocomplete="off" maxlength="4" type="text" name="code" placeholder="请输入图片验证码">'+
+										'<span class="LT_code_img fr" id="changeCode"><img class="LT_captchaImage" src=""></span>'+
+									'</div>'+
+								'</li>'+
+								'<li class="clearfix LT_test">'+
+									'<input id="LT_code" placeholder="请输入短信验证码" maxlength="6">'+
+									'<a href="javascript:;" class="btn fr" id="LT_getCode">获取验证码</a>'+
+								'</li>'+
+								(options._html||'')+
+							'</ul>'+
+							'<a href="javascript:;" class="LT_loginBtn">确 定</a>'+
+							'<div class="LT_more clearfix"><br><br></div>'+
+						'</div>'+
+					'</div>'+
+				'</div>'
+			);
+			if(options.show_choose){
+				$('<div class="LT_choose clearfix">'+
+						'<a href="javascript:;" class="active">iOS</a>'+
+					'<a href="javascript:;">安卓</a>'+
+				'</div>').insertBefore('.LT_Login .LT_cont .LT_message');
+			}
+        },
+        eventFn: function (options) {
+        	var self = this;
+			$('#phone_login').off('click keyup')
+			.on('click','.LT_loginBtn',function(e){
+				self.test(options);
+			})
+			.on('keyup',function(e){
+				if(e.keyCode==13 && $('.LT_Login').length){
+					self.test(options);
+				};
+			})
+			.on('click','.LT_popup .LT_close',function(){
+				self.del(self);
+			});
+			$('#ltCaptcha').ltCaptcha({
+				sys: options.game_type,
+				onLoadSuccess: function(captchaObj, type) {
+					//获取短信验证码
+					$('body')
+					.on('click','#LT_getCode',function(){
+						self.getMsg(captchaObj, type,options);
+					});
+				}
+			});
+			
+			//系统选择
+			options._cho_index=0;
+			$('.LT_choose a').off('click').on('click',function(){
+				options._cho_index=$(this).index();
+				$(this).addClass('active').siblings().removeClass('active');
+			})
+       	},
+       	getMsg:function(captchaObj,type,options){
+       		if($('#LT_getCode').hasClass('hui'))return;
+       		var self=this;
+			var tel=$('#LT_phone').val();//手机号
+			var pattern = /^1[3456789][0123456789]\d{8}$/;//判断手机号
+			if(tel==''){
+				self.showPrompt('请先输入你的手机号。');
+				return false;
+			}
+			if(!pattern.test(tel)){
+				self.showPrompt('请输入正确的手机号。');
+				return false;
+			}
+			
+            var param = {};
+            if(type == 1){
+                param.captchaCode = $('#ltCaptcha').find('input[name="j_captcha"]').val();
+                if(param.captchaCode == undefined || $.trim(param.captchaCode) == ''){
+					self.showPrompt('请输入图片验证码。');
+                	return;
+                }
+            }
+            if(type == 2 ){
+                var result = captchaObj.getValidate();
+                if (result== undefined || !result ) {
+					self.showPrompt('请点击按钮进行图片验证。');
+                    return;
+                }
+                param.geetest_challenge = result.geetest_challenge;
+                param.geetest_validate = result.geetest_validate;
+                param.geetest_seccode = result.geetest_seccode;
+            }
+			param.captchaId = $('#ltCaptcha').find('input[name="captchaId"]').val();
+            $.ajax({
+                url:options.url,
+                jsonp:'jsonpcallback',
+                dataType:'jsonp',
+                type: 'get',
+                data:{
+                	'game':options.game_type,
+                	'captchaType':type==1 ? 'ltimage' : 'geetest',
+                	'phone':tel,
+                    'captchaId':param.captchaId,
+                    'id':options.id,
+                    'timestamp':options.capchaTimestamp_, 
+                    'j_captcha':param.captchaCode,
+                    'geetest_challenge': param.geetest_challenge,
+                    'geetest_validate': param.geetest_validate, 
+                    'geetest_seccode': param.geetest_seccode 
+                },
+                success:function(data){
+                    click = false;
+                    if(data.status==1){
+                        self.handler(options);
+
+                    }else{
+                        self.showPrompt(data.message);
+                        // 重置极验
+                        $('#ltCaptcha').trigger('captcha-reset');
+                    }
+                },
+                error:function(e){
+                    self.showPrompt('网络异常，请稍后再试');
+                }
+            });
+		},
+		//提交
+       	test:function(options){
+       		var self=this;
+			var tel=$('#LT_phone').val();//手机号
+			var code=$('#LT_code').val();//短信验证码
+			var pattern = /^1[3456789][0123456789]\d{8}$/;//判断手机号
+			if(tel==''){
+				this.showPrompt('请先输入你的手机号。');
+				return false;
+			}
+			if(!pattern.test(tel)){
+				this.showPrompt('请输入正确的手机号。');
+				return false;
+			}
+			if(code==''){
+				this.showPrompt('请先输入短信验证码。');
+				return false;
+			}
+			var _data={
+	            'phone':tel,
+	            'code':code,
+	            'system':'',
+	        };
+	        if(options.show_choose){
+	            _data.system=options._cho_index;
+	        }
+	        if(options.callback_date){
+	        	for(var i in options.callback_date){
+	        		_data[i]=$(options.callback_date[i]).val();
+	        	}
+	        }
+	        if(options.ajax_status)return;
+	        options.ajax_status=true;
+		    $.ajax({
+			        url:options.callback_url,
+                    jsonp:'jsonpcallback',
+                    dataType:'jsonp',
+			        data:_data,
+			        success:function(data){
+			            if(data.status=='1'||data.status=='2'){
+			                //成功
+		    				options.callback && options.callback(data);
+			            }else{
+			                self.showPrompt(data.message);
+			            }
+			            //重置极验
+			            $('#ltCaptcha').trigger('captcha-reset');
+			            options.ajax_status=false;
+			        },
+			        error:function(e){
+			            self.showPrompt('网络异常，请稍后再试');
+			            //重置极验
+			            $('#ltCaptcha').trigger('captcha-reset');
+			            options.ajax_status=false;
+			        }
+		    });
+		},
+		//倒计时
+        handler:function(options){
+        	var self=this;
+        	$('#LT_getCode').text('60s').addClass('hui');
+			self.showPrompt('短信发送中，请稍后！');
+			var i=60;
+			clearInterval(self.times);
+			self.times=setInterval(function(){
+				i--;
+				$('#LT_getCode').text(i+'s');
+				if(i<0){
+					clearInterval(self.times);
+					$('#LT_getCode').empty().text('获取验证码').removeClass('hui');
+				}
+			}, 1000);
+        },
+        //提示信息
+        showPrompt:function(msg){
+        	var self=this;
+			var msgs=msg;
+			if(msgs){
+				msgs='<i class="LT_icon"></i>'+msg;
+			}else{
+				msgs=msg;
+			}
+			$('.LT_popup .LT_error_txt').html(msgs);
+			clearTimeout(self.time);
+			self.time=setTimeout(function(){
+				self.showPrompt('');
+				clearTimeout(self.time);
+			},3000);
+      	},
+      	del:function(self){
+      		$('.LT_Login').remove();
+		$('#LT_phone_login_css').remove();
+		clearInterval(self.times);
+		$('#LT_getCode').empty().text('获取验证码').removeClass('hui');
+      	}
+    }
+})(jQuery);
