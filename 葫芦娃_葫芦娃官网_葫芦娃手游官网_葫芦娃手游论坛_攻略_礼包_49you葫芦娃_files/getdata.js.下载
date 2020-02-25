@@ -1,0 +1,94 @@
+/**
+ * 
+ */
+
+var y = {
+		baseUrl: '',
+		apiUrl: '',
+		pageIndex:1,
+		pageEnable:true,
+		pending:false,
+		url:{
+			log: this.apiUrl+'',
+			reg: this.apiUrl+'',
+			code: this.apiUrl+'',
+			gift: this.apiUrl+''
+		},
+		regExp:{
+			username: /^\w{6,20}$/i,
+			password: /^[a-zA-Z0-9`~!-@#$%^&*()_+|{}\[\];':"<>?,.\/]{6,20}$/
+		},
+		ajaxHelper:{
+			TipObj:null,
+			TargetObj:null
+		}
+		
+}
+//推送
+function takeGift(card_id, _obj){	
+	var _html = '<div class="xskdiv pa dn" id="takecard"><a href="javascript:;" class="closebtn bl pa">X</a><p class="lbxlh_p"></p><p class="wxtips_p">温馨提示：长按礼包序列号即可复制</p></div>';
+	var uid = '';
+	var udid = '';
+	var $obj = $(_obj);
+	var $tip = null;
+	var sign = '';
+	
+	if(y.pending || $obj.attr("enable") == "false"){
+		return false;
+	}
+	if(!$("#takecard").length){
+		$("body").append(_html);
+	}
+	$tip = $("#takecard");
+	if(!card_id){
+		$tip.children(".lbxlh_p").html('暂无礼包').show();
+		return false;
+	}
+	if(window.location.href.indexOf("tuisong")>0){
+		if(typeof $_GET['udid'] !='undefined'){
+			udid = $_GET['udid'];
+			sign = $_GET['sign'];	
+			var _ps = {appId:233,udid:udid,giftId:card_id,requestId:"233",sign:sign,device:3, 'dataType':1};
+		}
+		if(!udid){
+			$tip.children(".lbxlh_p").html('非推广用户，不能领取礼包').show();
+			return false;
+		}
+	}else{
+		if(typeof TM != 'undefined' && typeof TM.user != 'undefined'){
+			uid = TM.user.Uid;
+		}
+		var _ps = {appId:233,uid:uid,giftId:card_id,requestId:"233",sign:sign,device:3, 'dataType':1};
+		if(!uid){
+			$tip.children(".lbxlh_p").html('请先登录，再领取礼包').show();
+			return false;
+		}
+	}
+	
+	y.pending = true;
+	$.ajax({
+		url:api_url + "/" + api_version + "/Games/GetGift",
+		type:"get",
+		dataType:"jsonp",
+		data:_ps,
+		success:function(list){
+			y.pending = false;
+			if(list.Result == true){
+				if(list.Data){
+					$tip.children(".lbxlh_p").html('礼包序列号：<span>'+list.Data+'</span>').show();
+				}else{
+					$tip.children(".lbxlh_p").html(list.Msg).show();
+				}				
+			}else{
+				$tip.children(".lbxlh_p").html(list.Msg).show();
+			}
+			$obj.attr("enable", true);
+		},
+		error:function(){
+			$tip.children(".lbxlh_p").html('网络繁忙，请稍后重试领取该礼包').show();
+		}
+	});
+	
+}
+
+

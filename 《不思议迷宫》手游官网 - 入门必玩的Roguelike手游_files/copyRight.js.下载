@@ -1,2 +1,0 @@
-var tYear = new Date().getFullYear();
-document.write('2004-' + tYear);

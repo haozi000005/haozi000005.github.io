@@ -1,0 +1,119 @@
+/**
+ * 
+ */
+
+var tm_href = window.location.href;
+if(checkDetect()){
+	
+	if(tm_href.indexOf('wap') == -1){
+		var _matchhls = tm_href.match(/\d+\/\d+.html(\?.*)?/);
+		if(_matchhls != null && typeof _matchhls[0] != 'undefined'){
+			if(typeof m_url != 'undefined' && m_url.indexOf(window.location.host) != -1){
+				window.location.href=m_url+'/wap/zixun/'+_matchhls[0];
+			}
+			if(typeof p_url != 'undefined' && p_url.indexOf(window.location.host) != -1){
+				window.location.href=p_url+'/wap/zixun/'+_matchhls[0];
+			}
+			window.location.href='http://'+window.location.host+'/wap/zixun/'+_matchhls[0];
+			
+		}else{
+		
+			if(typeof m_url != 'undefined' && m_url.indexOf(window.location.host) != -1){
+				window.location.href=m_url+'/wap'+(document.referrer.match(/baidu/) ? '?baidu=1' : '?1');			
+			}else if(typeof p_url != 'undefined' && p_url.indexOf(window.location.host) != -1){
+				window.location.href=p_url+'/wap'+(document.referrer.match(/baidu/) ? '?baidu=1' : '?1');
+			}else{
+				var url = window.location.href;
+				var hosts = url.split("?");
+				var path = "";
+				if(hosts.length > 1){
+					path = hosts[0]+"/wap?"+hosts[1];
+				}else{
+					path = hosts[0]+"/wap";
+				}
+				window.location.href=path;
+			}
+		}
+	}
+
+	
+}
+/*else{	
+	if(tm_href.indexOf(p_url) == -1 && window.location.pathname.indexOf('index') == -1){		
+		//window.location.href=p_url;
+	}
+}
+*/
+function checkDetect(){
+	var ua =  [
+		'alcatel',
+		'android',
+		'au-mic', 
+		'audiovox', 
+		'avantgo',
+		'blackberry',
+		'blazer',
+		'bolt',
+		'cldc-',
+		'cricket',
+		'danger',
+		'ddi',
+		'docomo',
+		'epoc',
+		'ericsson,',
+		'ericy',
+		'htc',
+		'ipad',
+		'ipaq',
+		'iphone',
+		'ipod',
+		'itunes',
+		'j2me',
+		'kddi',
+		'kindle',
+		'netfront',
+		'nintendo',
+		'nitro',
+		'nokia',
+		'midp-',
+		'minimo',
+		'mobile',
+		'mot',
+		'opera mini',
+		'opera mobi',
+		'palmos',
+		'palmsource',
+		'panasonic',
+		'philips',
+		'pie',
+		'pocketpc', 
+		'portalmmm',
+		'rim',
+		'rover',
+		'samsung',
+		'sanyo',
+		'series60',
+		'sharp',
+		'sie-', 
+		'smartphone',
+		'sony',
+		'symbian',
+		'tablet',
+		'tear',
+		'up.browser',
+		'up.link',
+		'vodafone',
+		'wap',
+		'windows ce',
+		'windows phone',
+		'wp7',
+		'xiino'
+	];
+	var uagent = navigator.userAgent.toLowerCase();
+	for(var i = 0, l = ua.length; i < l; i++){
+		if (uagent.search(ua[i]) > -1){
+			return true;
+		}
+	} 
+	return false;
+}

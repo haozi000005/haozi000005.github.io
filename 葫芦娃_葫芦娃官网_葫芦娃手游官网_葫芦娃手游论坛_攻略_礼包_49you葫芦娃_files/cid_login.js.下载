@@ -1,0 +1,47 @@
+$(function(){
+	var cid = getUrlParam('Cid');
+	var token = getUrlParam('CidToken');
+	var stau = getUrlParam('stau');
+	if(cid && token && stau !=1 ){
+		$.ajax({
+			type:'POST',
+			data:{'cid':cid,'token':token,'device':3},
+			dataType:'json',
+			url:"https://api.sdk.49app.com/V7/Accounts/cidLogin",
+			success:function(res){
+				if(res.Result){
+					// alert("登录成功");
+					if(typeof res.script != 'undefined' && res.script){
+						var head = document.getElementsByTagName('head')[0];
+				        for(var jsonpd in res['script']) {
+				            var script = document.createElement("script");
+				            script.setAttribute('src' , res['script'][jsonpd]);
+				            head.appendChild(script);
+				        }
+					}
+					if(typeof loginTip != 'undefined'){
+						loginTip(res.Data);
+					}
+					setTimeout(function(){
+						window.location.href='http://'+window.location.host+window.location.pathname
+					}, 300);
+				}else{
+					alert("登录失败");
+				}
+			}
+		});	
+	}
+
+	if(typeof TM.user != "undefined" && TM.user.Uid){
+		$(".back_div").hide();
+		
+	}
+});
+
+
+function getUrlParam(name) {
+    var reg = new RegExp("(^|&)" + name + "=([^&]*)(&|$)"); //构造一个含有目标参数的正则表达式对象
+    var r = window.location.search.substr(1).match(reg);  //匹配目标参数
+    // if (r != null) return decodeURI (r[2]); return null; //返回参数值
+    if (r != null) return unescape(r[2]); return null; //返回参数值
+}
